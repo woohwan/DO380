@@ -1,0 +1,30 @@
+---
+- name: Label worker nodes as infra nodes
+  hosts: localhost
+  module_defaults:
+    group/k8s:
+      ca_cert: "/etc/pki/tls/certs/ca-bundle.crt"
+  tasks:
+    - name: Log in (obtain access token)
+      k8s_auth:
+        host: "https://api.ocp4.example.com:6443"
+        username: admin
+        password: redhat
+        validate_certs: false
+      register: k8s_auth_results
+
+    - name: Label nodes
+      vars:
+        nodes:
+          - worker04
+          - worker05
+          - worker06
+        labels:
+          - "node-role.kubernetes.io/infra: ''"
+          - "node-role.kubernetes.io/worker: null"
+      k8s:
+        state: present
+        definition: "{{ lookup('template', 'templates/node.j2') }}"
+      loop: "{{ nodes }}"
+      loop_control:
+        label: Changing labels for node {{ item }}.
